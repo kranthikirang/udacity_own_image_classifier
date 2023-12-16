@@ -31,8 +31,8 @@ debug = args.debug
 def main():
     traning = TRANING(data_dir=data_dir, save_dir=save_dir, model_name=arch, learning_rate=learning_rate, hidden_units=hidden_units, dropout=dropout, 
                       epochs=epochs, category_names=category_names, gpu_flag=gpu, debug=debug)
-    # traning.train(train_network=False)
-    traning.train()
+    traning.train(train_network=False)
+    # traning.train()
 
 if __name__== "__main__":
     main()

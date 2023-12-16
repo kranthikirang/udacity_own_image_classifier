@@ -2,3 +2,4 @@ __pycache__
 *.gz
 *.pth
 flowers/
+.ipynb_checkpoints/

@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(
     description = 'Parser for train.py'
 )
 parser.add_argument('--image_path', dest="image_path", help="path to the image", default="", required=True)
-parser.add_argument('--checkpoint', dest="checkpoint", help="model checkpoint path", default="./vgg19bn_checkpoint.pth")
+parser.add_argument('--checkpoint', dest="checkpoint", help="model checkpoint path", default="", required=True)
 parser.add_argument('--category_names', dest="category_names", help="category names or labels as json file path", type=str, default='cat_to_name.json')
 parser.add_argument('--top_k', dest="top_k", help="top classes and probabilities", type=int, default=5)
 parser.add_argument('--gpu', action=argparse.BooleanOptionalAction, dest="gpu", default=True, type=bool)

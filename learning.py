@@ -53,26 +53,27 @@ class PREDICT():
         img = torch.unsqueeze(img,0).to(self.device).float()
         
         self.model.eval()
-        logps = self.model.forward(img)
+        logps = self.model(img)
         ps = torch.exp(logps)
         top_p, top_class = ps.topk(self.top_k, dim=1)
         class_list= top_class.tolist()[0]
         p_list = top_p.tolist()[0]
-    #     print(cat_to_name['2'])
+
+        idx_to_flower = {v:self.category_names[k] for k, v in self.model.class_to_idx.items()}
+        predicted_flowers_list = [idx_to_flower[i] for i in class_list]
+
         if ret_dict:
+            self.logger.debug(f'Preditecd items are: {predicted_flowers_list}')
             classes = {}
-            for index, item in enumerate(class_list):
-                classes[self.category_names[str(item)]]=p_list[index]*100
+            for index, item in enumerate(predicted_flowers_list):
+                classes[item]=p_list[index]*100
             self.logger.info(f'Top {self.top_k} classes: predictions are')
             self.logger.info(f'==================================')
             for key, val in classes.items():
                 self.logger.info(f'{key}: {val}')
             # return classes
         else:
-            classes = []
-            for item in class_list:
-                classes.append(self.category_names[str(item)])
-            return p_list, classes
+            return p_list, predicted_flowers_list
 
     def process_image(self):
         ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
@@ -115,6 +116,7 @@ class PREDICT():
             self.dropout = checkpoint['dropout']
             self.learning_rate = checkpoint['learning_rate']
             self.epochs = checkpoint['epochs']
+            self.model_arch = checkpoint['arch']
         except Exception as e:
             self.logger.error(e)
     
@@ -127,10 +129,10 @@ class PREDICT():
 
         #read the json to use in prediction label mapping
         with open(category_names, 'r') as f:
-            self.category_names = json.load(f)
+            self.category_names = json.load(f, strict=False)
 
         # Now let's set the classfier from the received model information from checkpoint
-        traning = TRANING(model_name=self.model_name, learning_rate=self.learning_rate, hidden_units=self.hidden_units, dropout=self.dropout, 
+        traning = TRANING(model_name=self.model_arch, learning_rate=self.learning_rate, hidden_units=self.hidden_units, dropout=self.dropout, 
                       epochs=self.epochs, category_names=category_names, debug=self.debug)
         try:
             print("calling set_classifier at load_checkpoint")
@@ -161,12 +163,24 @@ class TRANING():
     def __init__(self, data_dir=None, save_dir=None, model_name=None, hidden_units=512, learning_rate=0.001, dropout=0.5, epochs=10, category_names=None, gpu_flag=False, debug=False):
         self.data_dir=data_dir
         self.save_dir=save_dir
-        self.model_name=model_name
         self.hidden_units=hidden_units
         self.hidden_units_list=hidden_units.split(',') #We use list to make sure we get number of hidden layers that we want
         self.learning_rate=learning_rate
         self.dropout=dropout
         self.epochs=epochs
+        self.model_arch=model_name
+
+        if model_name.upper() == 'VGG':
+            self.model_name = 'vgg19'
+            self.in_features = 25088
+        elif model_name.upper() == 'DENSENET':
+            self.model_name = 'densenet121'
+            self.in_features = 1024
+        elif model_name.upper() == "ALEXNET":
+            self.model_name = 'alexnet'
+            self.in_features = 9216
+
+        print(f'model_name is: {model_name}')
 
         device="cpu"
         if gpu_flag:
@@ -262,7 +276,9 @@ class TRANING():
         """
         This method will save the model to checkpoint onm defined save_dir
         """
-        checkpoint = {'name': self.model_name,
+        checkpoint = {'arch': self.model_arch,
+                    'name': self.model_name,
+                    'in_features': self.in_features,
                     'hidden_units': self.hidden_units,
                     'dropout': self.dropout,
                     'learning_rate': self.learning_rate,
@@ -279,6 +295,7 @@ class TRANING():
             torch.save(checkpoint, self.checkpoint_filename)
         except Exception as e:
             self.logger.error(e)
+        self.logger.debug(f'checkpoint details are: {checkpoint}')
 
     def train_network(self):
         """
@@ -297,7 +314,7 @@ class TRANING():
                 # Move input and label tensors to the default device
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 
-                logps = self.model.forward(inputs)
+                logps = self.model(inputs)
                 loss = self.criterion(logps, labels)
                 
                 self.optimizer.zero_grad()
@@ -319,7 +336,7 @@ class TRANING():
                     with torch.no_grad():
                         for inputs, labels in self.validloader:
                             inputs, labels = inputs.to(self.device), labels.to(self.device)
-                            logps = self.model.forward(inputs)
+                            logps = self.model(inputs)
                             batch_loss = self.criterion(logps, labels)
                             
                             validation_loss += batch_loss.item()
@@ -354,13 +371,7 @@ class TRANING():
             external_call=True
         classifier_list=[]
         #For the first hidden layer
-        # in_features=self.model.classifier[0].in_features
-        # out_features=self.model.classifier[0].out_features
-        # classifier_list.append(('fc', nn.Linear(in_features, out_features)))
-        # classifier_list.append(('relu', nn.ReLU()))
-        # classifier_list.append(('dropout', nn.Dropout(self.dropout)))
-        # in_features = out_features
-        in_features=self.model.classifier[0].in_features
+        in_features=self.in_features
         for index, layer in enumerate(self.hidden_units_list):
             out_features=int(layer)
             self.logger.debug(f'in_features: {in_features}, out_features: {out_features}, index: {index}')

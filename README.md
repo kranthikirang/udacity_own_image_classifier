@@ -5,7 +5,7 @@ Project code for Udacity's AI Programming with Python Nanodegree program. In thi
 ## Command Line Arguments for train.py
 - --data_dir DATA_DIR   data directory to read the data files
 - --save_dir SAVE_DIR   destination directory to save the model checkpoint
-- --arch ARCH           pre-trained model architecture (default=vgg19bn)
+- --arch ARCH           pre-trained model architecture (default=VGG) (supported: VGG(vgg19)/Densenet(densenet121/Alexnet(alexnet))
 - --learning_rate LEARNING_RATE
                         learning rate (default=0.001)
 - --hidden_units HIDDEN_UNITS
@@ -19,7 +19,9 @@ Project code for Udacity's AI Programming with Python Nanodegree program. In thi
 
 ### train.py Example
 ```
-python3 train.py --data_dir ./flowers --hidden_units 4096,1024 --arch vgg19 --epochs 10 --debug
+python3 train.py --data_dir ./flowers --hidden_units 4096,1024 --arch vgg --epochs 10 --debug
+python3 train.py --data_dir ./flowers --arch densenet --epochs 10 --debug
+python3 train.py --data_dir ./flowers --hidden_units 2048,512 --arch alexnet --epochs 10
 ```
 
 ## Command Line Arguments for predict.py
