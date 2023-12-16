@@ -1,0 +1,4 @@
+__pycache__
+*.gz
+*.pth
+flowers/
